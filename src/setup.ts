@@ -2,8 +2,9 @@ import { existsSync } from "node:fs";
 import { randomBytes } from "node:crypto";
 import { createServer } from "node:net";
 import { join } from "node:path";
-import type { AppConfig, RuntimeMode, SubagentProtocol } from "./config";
+import type { AppConfig, ExternalApiConfig, RuntimeMode, SubagentProtocol } from "./config";
 import {
+  assertExternalApiConfig,
   currentRuntimeCommand,
   defaultBrokerEndpoint,
   defaultConfig,
@@ -59,6 +60,10 @@ export interface SetupOptions {
   tunnelId?: string;
   runtimeKeyFile?: string;
   runtimeKeyValue?: string;
+  externalApiEnabled?: boolean;
+  externalApiHost?: string;
+  externalApiPort?: number;
+  externalApiToken?: string;
 }
 
 export interface SetupResult {
@@ -69,6 +74,7 @@ export interface SetupResult {
   tunnelReady: boolean | null;
   codexRestartRequired: true;
   connectorSetupRequired: boolean;
+  externalApi?: ExternalApiConfig;
 }
 
 export interface DevProfileSetupResult {
@@ -128,6 +134,7 @@ function meaningfulRuntimeChange(before: AppConfig, after: AppConfig): boolean {
     controlToken: before.controlToken,
     runtimeCommand: before.runtimeCommand,
     tunnel: before.tunnel,
+    externalApi: before.externalApi,
   }) !== JSON.stringify({
     mode: after.mode,
     subagentProtocol: after.subagentProtocol,
@@ -149,6 +156,7 @@ function meaningfulRuntimeChange(before: AppConfig, after: AppConfig): boolean {
     controlToken: after.controlToken,
     runtimeCommand: after.runtimeCommand,
     tunnel: after.tunnel,
+    externalApi: after.externalApi,
   });
 }
 
@@ -231,6 +239,16 @@ function baseConfig(existing: AppConfig | undefined, options: SetupOptions): App
     config.experimentalBiggerContext = options.experimentalBiggerContext;
   }
   if (options.acknowledgedUnofficial) config.acknowledgedUnofficialAt = new Date().toISOString();
+  if (options.externalApiEnabled === false) delete config.externalApi;
+  if (options.externalApiEnabled === true) {
+    config.externalApi = {
+      enabled: true,
+      host: options.externalApiHost ?? config.externalApi?.host ?? "127.0.0.1",
+      port: options.externalApiPort ?? config.externalApi?.port ?? 17_842,
+      token: options.externalApiToken ?? config.externalApi?.token ?? randomBytes(32).toString("base64url"),
+    };
+  }
+  assertExternalApiConfig(config);
   if (!config.acknowledgedUnofficialAt) {
     throw new Error("Setup requires explicit acknowledgement that this is unofficial browser automation. Pass --acknowledge-unofficial.");
   }
@@ -468,6 +486,7 @@ export async function setup(options: SetupOptions): Promise<SetupResult> {
     tunnelReady,
     codexRestartRequired: true,
     connectorSetupRequired: config.mode === "full",
+    ...(config.externalApi ? { externalApi: config.externalApi } : {}),
   };
 }
 

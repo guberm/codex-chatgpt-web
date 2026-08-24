@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/miuuyy/codex-chatgpt-web/actions/workflows/ci.yml"><img src="https://github.com/miuuyy/codex-chatgpt-web/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/guberm/codex-chatgpt-web/actions/workflows/ci.yml"><img src="https://github.com/guberm/codex-chatgpt-web/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT license"></a>
   <img src="https://img.shields.io/badge/macOS-arm64%20%7C%20x64-black?logo=apple" alt="macOS arm64 and x64">
   <img src="https://img.shields.io/badge/Windows-x64-0078d4?logo=windows11" alt="Windows x64">
@@ -86,13 +86,13 @@ preserving the ChatGPT profile and launcher configuration.
 **macOS or Linux**
 
 ```bash
-curl -fsSL https://github.com/miuuyy/codex-chatgpt-web/releases/latest/download/install-launcher.sh | sh
+curl -fsSL https://github.com/guberm/codex-chatgpt-web/releases/latest/download/install-launcher.sh | sh
 ```
 
 **Windows PowerShell**
 
 ```powershell
-irm https://github.com/miuuyy/codex-chatgpt-web/releases/latest/download/install-launcher.ps1 | iex
+irm https://github.com/guberm/codex-chatgpt-web/releases/latest/download/install-launcher.ps1 | iex
 ```
 
 Then complete the three checks in the app:
@@ -113,7 +113,7 @@ model API key, installed Chrome/Chromium, system Node/Bun, or project-managed br
 **Run from source**
 
 ```bash
-git clone https://github.com/miuuyy/codex-chatgpt-web.git && \
+git clone https://github.com/guberm/codex-chatgpt-web.git && \
 cd codex-chatgpt-web && \
 bun run app
 ```
@@ -131,6 +131,37 @@ Every picker entry has one fixed ChatGPT mode. Codex still displays its built-in
 rows, but changing them cannot silently change the selected browser model. In Full mode every
 available effort receives the same turn-bound MCP capability. Pro has no separate restriction or
 reduced tool contract.
+
+## External Responses API
+
+An optional second listener exposes the available `chatgpt-web/*` routes to OpenAI Responses API
+clients. It is disabled by default, uses a separate bearer token, and never exposes native model
+passthrough, health, lifecycle, search, or compaction routes.
+
+Enable it during setup. Omitting `--external-api-token` generates and prints a 256-bit token:
+
+```bash
+codex-chatgpt-web setup --browser-only --external-api --external-api-host 127.0.0.1
+```
+
+Then point an OpenAI client at the external listener:
+
+```python
+from openai import OpenAI
+
+client = OpenAI(base_url="http://127.0.0.1:17842/v1", api_key="YOUR_EXTERNAL_API_TOKEN")
+response = client.responses.create(model="chatgpt-web/high", input="Explain this API briefly.")
+print(response.output_text)
+```
+
+`GET /v1/models`, streaming Responses calls, `previous_response_id`, and standard function tools
+are supported. Function tools require Full harness setup; calls are returned to the API client for
+execution and run under a synthetic read-only environment with no local workspace authority.
+
+Keep the listener on `127.0.0.1` for local agents. To bind a LAN, VPN, or container-facing IP, use
+`--external-api-host`; plain HTTP does not protect the bearer token in transit, so non-loopback
+deployments require a trusted private network or a TLS reverse proxy. Disable it with
+`--no-external-api` and restart the owning launcher/service after changing setup.
 
 ## Full harness
 
@@ -197,7 +228,7 @@ codex-chatgpt-web subagents native
 
 ## Limitations and security
 
-- This is unofficial browser automation, not an OpenAI API. ChatGPT UI changes can break selectors;
+- This is unofficial browser automation, not the official OpenAI API. ChatGPT UI changes can break selectors;
   drift fails explicitly instead of silently switching model or transport.
 - ChatGPT's account-specific composer ceilings are smaller than some underlying model windows.
   The measured boundaries and requirements for a larger deterministic transport are tracked in

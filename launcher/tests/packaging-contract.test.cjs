@@ -70,6 +70,21 @@ test("release installers resolve checksummed native launcher assets", () => {
   assert.match(packageSmoke, /reg\.exe[\s\S]*InstallLocation/);
 });
 
+test("fork installers and updater use the fork release channel", () => {
+  const expectedRepository = "guberm/codex-chatgpt-web";
+  const sources = [
+    repositoryManifest.repository.url,
+    repositoryManifest.homepage,
+    repositoryManifest.bugs.url,
+    fs.readFileSync(path.join(repositoryRoot, "scripts", "install.sh"), "utf8"),
+    fs.readFileSync(path.join(repositoryRoot, "scripts", "install-launcher.sh"), "utf8"),
+    fs.readFileSync(path.join(repositoryRoot, "scripts", "install-launcher.ps1"), "utf8"),
+    fs.readFileSync(path.join(launcherRoot, "electron", "main.cjs"), "utf8"),
+    fs.readFileSync(path.join(launcherRoot, "electron", "update.cjs"), "utf8"),
+  ];
+  for (const source of sources) assert.match(source, new RegExp(expectedRepository.replace("/", "\\/")));
+});
+
 test("packaged launcher owns a detached checksummed updater for every release platform", () => {
   const updater = fs.readFileSync(path.join(launcherRoot, "electron", "update.cjs"), "utf8");
   const worker = fs.readFileSync(path.join(launcherRoot, "electron", "update-worker.cjs"), "utf8");
