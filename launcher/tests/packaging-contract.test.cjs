@@ -85,6 +85,12 @@ test("fork installers and updater use the fork release channel", () => {
   for (const source of sources) assert.match(source, new RegExp(expectedRepository.replace("/", "\\/")));
 });
 
+test("published shell installers use Unix line endings", () => {
+  for (const file of ["install.sh", "install-launcher.sh"]) {
+    assert.doesNotMatch(fs.readFileSync(path.join(repositoryRoot, "scripts", file), "utf8"), /\r/);
+  }
+});
+
 test("packaged launcher owns a detached checksummed updater for every release platform", () => {
   const updater = fs.readFileSync(path.join(launcherRoot, "electron", "update.cjs"), "utf8");
   const worker = fs.readFileSync(path.join(launcherRoot, "electron", "update-worker.cjs"), "utf8");
